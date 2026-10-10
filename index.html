@@ -1,0 +1,779 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>RC Circuit Lab</title>
+<style>
+:root{
+  --bg:#0B1A2B; --panel:#10243A; --panel2:#0E2135; --line:#24405C;
+  --txt:#F1ECDF; --mut:#9AAEC2; --dim:#5F7894;
+  --gr:#7FD4A8; --am:#E8B23A; --co:#F2917F;
+  --mono:ui-monospace,"SF Mono",Menlo,Consolas,"Liberation Mono",monospace;
+  --sans:-apple-system,BlinkMacSystemFont,"Segoe UI","Noto Sans Thai","Sarabun",Roboto,sans-serif;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%;overflow:hidden}
+body{background-color:var(--bg);color:var(--txt);font-family:var(--sans);-webkit-tap-highlight-color:transparent;
+  background-image:linear-gradient(rgba(255,255,255,.035) 1px,transparent 1px),linear-gradient(90deg,rgba(255,255,255,.035) 1px,transparent 1px);
+  background-size:28px 28px}
+button{font-family:inherit;cursor:pointer}
+#app{display:flex;flex-direction:column;height:100vh;height:100dvh}
+
+/* ---------- header ---------- */
+header{flex:0 0 auto;display:flex;align-items:center;justify-content:space-between;gap:12px;
+  padding:12px 18px 10px;border-bottom:1px solid var(--line)}
+h1{font-size:clamp(19px,2.4vw,26px);font-weight:800;line-height:1.15}
+.sub{font-size:clamp(12px,1.4vw,14px);color:var(--mut);margin-top:3px}
+.hbtns{display:flex;gap:8px;align-items:center;flex:0 0 auto}
+.seg{display:flex;border:1.5px solid var(--line);border-radius:10px;overflow:hidden}
+.seg button{background:none;border:0;color:var(--mut);font-weight:700;font-size:14px;padding:8px 13px}
+.seg button.on{background:var(--panel);color:var(--am)}
+.hb{background:none;border:1.5px solid var(--line);color:var(--txt);border-radius:10px;font-weight:700;font-size:14px;padding:8px 13px}
+.hb.on{border-color:var(--am);color:var(--am)}
+
+/* ---------- stage ---------- */
+#stage{position:relative;flex:1 1 auto;min-height:0;padding:4px 10px}
+#board{width:100%;height:100%}
+#board svg{width:100%;height:100%;display:block}
+.clk{cursor:pointer}
+#graphBtn{position:absolute;top:10px;right:16px;background:rgba(14,33,53,.9);border:1.5px solid var(--line);
+  color:var(--txt);border-radius:10px;font-weight:700;font-size:14px;padding:8px 13px}
+#tkey{position:absolute;top:10px;right:120px;display:none;border:1.5px dashed var(--am);border-radius:10px;
+  padding:8px 12px;font:13px/1.6 var(--mono);color:var(--am);background:rgba(11,26,43,.9)}
+
+/* ---------- chips ---------- */
+#chips{flex:0 0 auto;display:flex;flex-wrap:wrap;gap:6px 14px;align-items:center;justify-content:center;padding:6px 10px}
+.cgrp{display:flex;gap:6px;align-items:center;white-space:nowrap}
+.glab{font:700 14px var(--mono);color:var(--dim);flex:0 0 auto}
+.chip{flex:0 0 auto;background:var(--panel2);border:1.5px solid var(--line);color:var(--txt);
+  border-radius:999px;padding:8px 12px;font-weight:600;font-size:14px}
+.chip.on{border-color:var(--gr);color:var(--gr);box-shadow:inset 0 0 0 1px var(--gr)}
+
+/* ---------- floating clock bar ---------- */
+#dock{flex:0 0 auto;padding:4px 12px calc(6px + env(safe-area-inset-bottom))}
+#bar{display:flex;flex-wrap:wrap;justify-content:center;align-items:center;gap:10px;max-width:1000px;margin:0 auto;
+  background:rgba(16,36,58,.94);border:1.5px solid var(--line);border-radius:18px;padding:9px 12px;
+  box-shadow:0 10px 30px rgba(0,0,0,.45)}
+.acts{display:flex;gap:6px}
+.act{background:var(--panel2);border:1.5px solid var(--line);color:var(--txt);border-radius:11px;
+  padding:10px 14px;font-weight:700;font-size:15px}
+.act.on.c{border-color:var(--gr);color:var(--gr)}
+.act.on.h{border-color:var(--am);color:var(--am)}
+.act.on.d{border-color:var(--co);color:var(--co)}
+.clockgrp{display:flex;gap:8px;align-items:center}
+#clock{font:700 clamp(28px,3.6vw,36px) var(--mono);letter-spacing:1px;min-width:7.2ch;text-align:center;font-variant-numeric:tabular-nums}
+#play{width:54px;height:46px;border-radius:12px;border:0;background:var(--gr);color:var(--bg);font-size:20px;font-weight:900}
+#play.run{background:var(--am)}
+#rst{width:48px;height:46px;border-radius:12px;border:1.5px solid var(--line);background:none;color:var(--txt);font-size:22px}
+#rec{height:46px;border-radius:12px;border:1.5px solid var(--am);background:none;color:var(--am);font-weight:800;font-size:15px;padding:0 14px;white-space:nowrap}
+#rec:active{background:var(--am);color:var(--bg)}
+#credit{margin-top:6px;text-align:center;font-size:11.5px;color:var(--dim);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+
+/* ---------- overlays ---------- */
+.ov{position:fixed;inset:0;background:rgba(3,10,18,.62);display:none;align-items:center;justify-content:center;padding:14px;z-index:20}
+.ov.show{display:flex}
+.card{background:var(--panel);border:1.5px solid var(--line);border-radius:16px;padding:18px;width:100%;max-width:420px;
+  max-height:92dvh;overflow:auto;box-shadow:0 20px 60px rgba(0,0,0,.5)}
+.card.wide{max-width:780px}
+.ct{display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;font-weight:800;font-size:17px}
+.x{background:none;border:0;color:var(--mut);font-size:22px;line-height:1}
+.fld{display:flex;flex-direction:column;gap:5px;margin-bottom:10px;font-size:13px;color:var(--mut)}
+.fld input,.tin{background:var(--panel2);border:1.5px solid var(--line);color:var(--txt);border-radius:10px;
+  padding:10px 12px;font:15px var(--mono);outline:none;width:100%}
+.fld input:focus,.tin:focus{border-color:var(--gr)}
+.row3{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+.btn{background:var(--panel2);border:1.5px solid var(--line);color:var(--txt);border-radius:10px;padding:10px 14px;font-weight:700;font-size:14px}
+.btn.pri{background:var(--gr);border-color:var(--gr);color:var(--bg)}
+.btns{display:flex;gap:8px;flex-wrap:wrap;justify-content:flex-end;margin-top:6px}
+.msg{font-size:13px;min-height:18px;margin-top:6px;color:var(--am)}
+.key{font:14px/1.7 var(--mono);color:var(--am);border:1.5px dashed var(--am);border-radius:10px;padding:10px 12px;margin:4px 0 14px}
+hr{border:0;border-top:1px solid var(--line);margin:14px 0}
+details summary{cursor:pointer;color:var(--mut);font-size:14px;margin-bottom:10px}
+
+/* graph */
+.gtabs{display:flex;gap:8px;margin-bottom:10px}
+.gwrap{display:grid;grid-template-columns:1fr 1fr;gap:4px 14px}
+#gwrap{display:block}
+.grow{display:grid;grid-template-columns:22px 1fr 1fr;gap:6px;align-items:center;font:12px var(--mono);color:var(--dim)}
+.grow input{background:var(--panel2);border:1.5px solid var(--line);color:var(--txt);border-radius:8px;padding:7px 6px;
+  font:14px var(--mono);text-align:center;width:100%;outline:none}
+.grow input:focus{border-color:var(--gr)}
+.ghead{font:12px var(--mono);color:var(--mut)}
+#chart{margin-top:6px}
+#chart svg{max-height:52dvh}
+#chart svg{width:100%;height:auto;display:block}
+#tgTools{display:none;gap:16px;align-items:center;flex-wrap:wrap;margin-top:10px;font-size:13px;color:var(--am)}
+#tgTools input{accent-color:var(--am);width:16px;height:16px;vertical-align:middle;margin-right:5px}
+#fitOut{font-family:var(--mono)}
+#toast{position:fixed;left:50%;top:70px;transform:translateX(-50%);background:var(--panel);border:1.5px solid var(--gr);color:var(--gr);
+  border-radius:10px;padding:8px 14px;font-size:14px;display:none;z-index:30}
+
+@media (max-width:640px){
+  header{padding:10px 12px 8px}
+  .seg button,.hb{padding:7px 10px;font-size:13px}
+  .act{padding:9px 10px;font-size:14px}
+  .gwrap{grid-template-columns:1fr}
+  .chip{padding:7px 10px;font-size:13px}
+  #credit{font-size:10px}
+}
+</style>
+</head>
+<body>
+<div id="app">
+  <header>
+    <div>
+      <h1 id="tTitle">RC Circuit Lab</h1>
+    </div>
+    <div class="hbtns">
+      <div class="seg"><button id="bEN" class="on">EN</button><button id="bTH">ไทย</button></div>
+      <button class="hb" id="bTeacher">Teacher</button>
+    </div>
+  </header>
+
+  <div id="stage">
+    <div id="board"></div>
+    <div id="tkey"></div>
+    <button id="graphBtn">📈 <span id="tGraphBtn">Graph</span> <span id="nPts"></span></button>
+  </div>
+
+  <div id="chips">
+    <div class="cgrp"><span class="glab">R</span>
+    <button class="chip on" data-r="single" id="cR0"></button>
+    <button class="chip" data-r="series" id="cRs"></button>
+    <button class="chip" data-r="parallel" id="cRp"></button></div>
+    <div class="cgrp"><span class="glab">C</span>
+    <button class="chip on" data-c="single" id="cC0"></button>
+    <button class="chip" data-c="series" id="cCs"></button>
+    <button class="chip" data-c="parallel" id="cCp"></button></div>
+  </div>
+
+  <div id="dock">
+    <div id="bar">
+      <div class="acts">
+        <button class="act c" id="aC"></button>
+        <button class="act h" id="aH"></button>
+        <button class="act d" id="aD"></button>
+        <button class="act" id="a0"></button>
+      </div>
+      <div class="clockgrp">
+        <div id="clock">00:00.00</div>
+        <button id="play">▶</button>
+        <button id="rst">↺</button>
+        <button id="rec">● <span id="tRec">Record</span></button>
+      </div>
+    </div>
+    <div id="credit"></div>
+  </div>
+</div>
+
+<!-- graph -->
+<div class="ov" id="ovGraph"><div class="card wide">
+  <div class="ct"><span>📈 <span id="tGraph"></span></span><button class="x" data-close>✕</button></div>
+  <div class="gtabs">
+    <button class="chip on" data-g="charge" id="gC"></button>
+    <button class="chip" data-g="discharge" id="gD"></button>
+  </div>
+  <div id="tgTools">
+    <label><input type="checkbox" id="showTheory"><span id="tTheory"></span></label>
+    <label><input type="checkbox" id="showLn"><span id="tLn"></span></label>
+    <span id="fitOut"></span>
+  </div>
+  <div id="chart"></div>
+  <div class="btns">
+    <button class="btn pri" id="bPlot"></button>
+    <button class="btn" id="bSave"></button>
+    <button class="btn" id="bClear"></button>
+  </div>
+  <div id="gwrap" style="margin-top:8px"></div>
+</div></div>
+
+<!-- password -->
+<div class="ov" id="ovPw"><div class="card">
+  <div class="ct"><span id="tPwTitle"></span><button class="x" data-close>✕</button></div>
+  <input class="tin" type="password" id="pwIn" autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false">
+  <div class="msg" id="pwMsg"></div>
+  <div class="btns"><button class="btn pri" id="pwOk">OK</button></div>
+</div></div>
+
+<!-- teacher panel -->
+<div class="ov" id="ovT"><div class="card">
+  <div class="ct"><span id="tTp"></span><button class="x" data-close>✕</button></div>
+  <div class="row3">
+    <div class="fld"><label id="lVs"></label><input type="number" id="inVs" step="0.1" inputmode="decimal"></div>
+    <div class="fld"><label id="lR0"></label><input type="number" id="inR0" step="0.1" inputmode="decimal"></div>
+    <div class="fld"><label id="lC0"></label><input type="number" id="inC0" step="1" inputmode="decimal"></div>
+  </div>
+  <div class="key" id="keyFull"></div>
+  <div class="btns" style="justify-content:flex-start">
+    <button class="btn pri" id="bLink"></button>
+    <button class="btn" id="bExit"></button>
+  </div>
+  <hr>
+  <details>
+    <summary id="tChg"></summary>
+    <div class="fld"><label id="lEm"></label><input type="email" id="inEm" autocapitalize="off" autocorrect="off"></div>
+    <div class="fld"><label id="lAp"></label><input type="password" id="inAp"></div>
+    <div class="fld"><label id="lNp"></label><input type="text" id="inNp" autocapitalize="off" autocorrect="off" spellcheck="false"></div>
+    <div class="btns"><button class="btn pri" id="bPwSave"></button></div>
+    <div class="msg" id="chgMsg"></div>
+  </details>
+</div></div>
+
+<div id="toast"></div>
+
+<script>
+/* ================= TEXT ================= */
+const T={
+ en:{title:'RC Circuit Lab', sub:'Series DC R–C circuit · charge · hold · discharge',
+  teacher:'Teacher', graph:'Graph', rec:'Record', full:'Table full — clear some rows first',
+  r0:'R₀', rs:'+R series', rp:'+R parallel', c0:'C₀', cs:'+C series', cp:'+C parallel',
+  aC:'CHARGE', aH:'HOLD', aD:'DISCHARGE', a0:'0 V',
+  swC:'CHARGE', swD:'DISCHARGE',
+  st:{idle:'IDLE',charge:'CHARGING',hold:'HOLD',discharge:'DISCHARGING'},
+  credit:'Asst.Prof.Dr. Rossumont Jaryabhand · Rajamangala University of Technology Tawan-ok, Uthenthawai Campus · No Right Reserved',
+  gC:'Charging', gD:'Discharging', plot:'Plot', save:'📤 Send graph image', shareTitle:'RC Circuit Lab — graphs', dl:'Image saved — attach it to an email to yourself', clear:'Clear',
+  axT:'t (s)', axV:'Vc (V)', axLnC:'ln(Vs − Vc)', axLnD:'ln(Vc)', noData:'enter at least 2 points, then Plot',
+  theory:'theory curve', lnp:'ln plot', fit:'τ from data',
+  pwTitle:'Teacher password', wrong:'Wrong password',
+  tp:'Teacher', vs:'Vs (V)', r0l:'R₀ (kΩ)', c0l:'C₀ (µF)', link:'🔗 Copy student link', copied:'Student link copied',
+  exit:'Exit teacher mode', chg:'Change password', em:'Email', ap:'Account password', np:'New teacher password',
+  pwSave:'Save new password', pwDone:'Password changed', pwBad:'Email or account password is incorrect', pwEmpty:'Enter a new password',
+  saved:'Saved'},
+ th:{title:'วงจร R-C', sub:'วงจร R-C กระแสตรง แบบอนุกรม · อัดประจุ · ค้าง · คายประจุ',
+  teacher:'ครู', graph:'กราฟ', rec:'บันทึก', full:'ตารางเต็มแล้ว — ล้างก่อน',
+  r0:'R₀', rs:'+R อนุกรม', rp:'+R ขนาน', c0:'C₀', cs:'+C อนุกรม', cp:'+C ขนาน',
+  aC:'อัดประจุ', aH:'ค้าง', aD:'คายประจุ', a0:'0 V',
+  swC:'อัดประจุ', swD:'คายประจุ',
+  st:{idle:'พร้อม',charge:'กำลังอัดประจุ',hold:'ค้างไว้',discharge:'กำลังคายประจุ'},
+  credit:'ผศ.ดร.รสสุมนต์ จารยะพันธุ์ · มหาวิทยาลัยเทคโนโลยีราชมงคลตะวันออก อุเทนถวาย · ไม่สงวนลิขสิทธิ์',
+  gC:'อัดประจุ', gD:'คายประจุ', plot:'วาดกราฟ', save:'📤 ส่งรูปกราฟ', shareTitle:'วงจร R-C — กราฟ', dl:'บันทึกรูปแล้ว — แนบไฟล์ส่งอีเมลตนเอง', clear:'ล้าง',
+  axT:'t (s)', axV:'Vc (V)', axLnC:'ln(Vs − Vc)', axLnD:'ln(Vc)', noData:'กรอกอย่างน้อย 2 จุด แล้วกดวาดกราฟ',
+  theory:'เส้นทฤษฎี', lnp:'กราฟ ln', fit:'τ จากข้อมูล',
+  pwTitle:'รหัสผ่านครู', wrong:'รหัสผ่านไม่ถูกต้อง',
+  tp:'ครู', vs:'Vs (V)', r0l:'R₀ (kΩ)', c0l:'C₀ (µF)', link:'🔗 คัดลอกลิงก์นักศึกษา', copied:'คัดลอกลิงก์แล้ว',
+  exit:'ออกจากโหมดครู', chg:'เปลี่ยนรหัสผ่าน', em:'อีเมล', ap:'รหัสผ่านบัญชี', np:'รหัสผ่านครูใหม่',
+  pwSave:'บันทึกรหัสใหม่', pwDone:'เปลี่ยนรหัสผ่านแล้ว', pwBad:'อีเมลหรือรหัสผ่านบัญชีไม่ถูกต้อง', pwEmpty:'กรอกรหัสผ่านใหม่',
+  saved:'บันทึกแล้ว'}
+};
+let lang='en';
+const L=()=>T[lang];
+const $=id=>document.getElementById(id);
+
+/* ================= STATE ================= */
+const ADD_R=15, ADD_C=1000;
+let Vs=9, R0=15, C0=1000;
+let rSlot='single', cSlot='single';
+let Req=15, Ceq=1000, tau=15;
+let mode='idle', V0=0, t0=null, Vdis=null;
+let teacher=false;
+
+/* locked values from a student link */
+(function readLink(){
+  const k=new URLSearchParams(location.search).get('lab');
+  if(!k) return;
+  try{
+    const d=JSON.parse(atob(k.split('').reverse().join('')));
+    if(isFinite(d.v)&&d.v>0) Vs=+d.v;
+    if(isFinite(d.r)&&d.r>0) R0=+d.r;
+    if(isFinite(d.c)&&d.c>0) C0=+d.c;
+  }catch(e){}
+})();
+
+/* ================= PHYSICS ================= */
+function recalc(){
+  Req = rSlot==='series' ? R0+ADD_R : rSlot==='parallel' ? R0*ADD_R/(R0+ADD_R) : R0;
+  Ceq = cSlot==='series' ? C0*ADD_C/(C0+ADD_C) : cSlot==='parallel' ? C0+ADD_C : C0;
+  tau = Req*1000*Ceq*1e-6;
+  drawBoard(); paintTeacher();
+}
+function volt(){
+  if(!(tau>0)) return V0;
+  const t = t0==null ? 0 : (performance.now()-t0)/1000;
+  if(mode==='charge') return Vs+(V0-Vs)*Math.exp(-t/tau);
+  if(mode==='discharge') return V0*Math.exp(-t/tau);
+  return V0;
+}
+function setMode(m){
+  V0=volt();
+  mode=m;
+  t0=(m==='charge'||m==='discharge')?performance.now():null;
+  if(m==='discharge') Vdis=V0;
+  if(m==='idle'){V0=0;Vdis=null;}
+  ['aC','aH','aD'].forEach(id=>$(id).classList.remove('on'));
+  const map={charge:'aC',hold:'aH',discharge:'aD'};
+  if(map[m]) $(map[m]).classList.add('on');
+  drawBoard(); paintTeacher();
+}
+
+/* ================= SVG BOARD ================= */
+const W=1100, H=520, TOP=95, MID=205, BOT=455, PY=150;
+const C_IDLE='#3B5876', C_CH='#7FD4A8', C_DI='#F2917F', C_LBL='#C9D4DF';
+const MONO='ui-monospace,SFMono-Regular,Menlo,Consolas,monospace';
+const SANS='-apple-system,Segoe UI,Noto Sans Thai,Sarabun,sans-serif';
+function wire(x1,y1,x2,y2,c,w){return `<line x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}" stroke="${c}" stroke-width="${w||5}" stroke-linecap="round"/>`;}
+function dot(x,y,c,r){return `<circle cx="${x}" cy="${y}" r="${r||7}" fill="${c}"/>`;}
+function txt(x,y,s,c,sz,anc,fam,wt){return `<text x="${x}" y="${y}" fill="${c||C_LBL}" font-size="${sz||18}" font-family="${fam||MONO}" font-weight="${wt||500}" text-anchor="${anc||'middle'}">${s}</text>`;}
+function resistor(cx,cy,label,c,isNew){
+  let s=wire(cx-64,cy,cx-40,cy,c)+wire(cx+40,cy,cx+64,cy,c);
+  s+=`<rect x="${cx-40}" y="${cy-16}" width="80" height="32" rx="10" fill="#CDB58A" stroke="${isNew?'#E8B23A':'#8F7B55'}" stroke-width="${isNew?3:2}"/>`;
+  ['#8B4A2B','#2E9E5B','#F07F1A'].forEach((col,i)=>{s+=`<rect x="${cx-22+i*16}" y="${cy-16}" width="9" height="32" fill="${col}"/>`;});
+  s+=txt(cx,cy-28,label,isNew?'#E8B23A':C_LBL,18);
+  return s;
+}
+function capacitor(cx,cy,h,label,c,isNew,side){
+  const w=64;
+  let s=`<rect x="${cx-w/2}" y="${cy-h/2}" width="${w}" height="${h}" rx="12" fill="#13283F" stroke="${isNew?'#E8B23A':'#5F7FA3'}" stroke-width="${isNew?3:2}"/>`;
+  s+=`<rect class="capfill" data-bot="${cy+h/2-5}" data-max="${h-10}" x="${cx-w/2+5}" y="${cy+h/2-5}" width="${w-10}" height="0" rx="7" fill="#7FD4A8" opacity="0.55"/>`;
+  s+=txt(cx,cy-h/2+20,'+','#C9D4DF',18);
+  s+=txt(cx,cy+h/2-8,'−','#C9D4DF',18);
+  if(side) s+=txt(cx-w/2-12,cy+6,label,isNew?'#E8B23A':C_LBL,18,'end');
+  else s+=txt(cx,cy+h/2+28,label,isNew?'#E8B23A':C_LBL,18);
+  return s;
+}
+let vmText=null, amText=null, capFills=[];
+function drawBoard(){
+  const t=L();
+  const c = mode==='charge'?C_CH : mode==='discharge'?C_DI : C_IDLE;
+  let s=`<svg viewBox="0 0 ${W} ${H}" preserveAspectRatio="xMidYMid meet" xmlns="http://www.w3.org/2000/svg">`;
+
+  /* ground rail */
+  s+=wire(40,BOT,1060,BOT,c);
+
+  /* battery */
+  const bx=95;
+  s+=wire(bx,BOT,bx,300,C_IDLE)+wire(bx,232,bx,TOP,mode==='charge'?c:C_IDLE);
+  s+=`<line x1="${bx-30}" y1="232" x2="${bx+30}" y2="232" stroke="#E6E1D3" stroke-width="5"/>`;
+  s+=`<line x1="${bx-17}" y1="249" x2="${bx+17}" y2="249" stroke="#E6E1D3" stroke-width="11"/>`;
+  s+=`<line x1="${bx-30}" y1="266" x2="${bx+30}" y2="266" stroke="#E6E1D3" stroke-width="5"/>`;
+  s+=`<line x1="${bx-17}" y1="283" x2="${bx+17}" y2="283" stroke="#E6E1D3" stroke-width="11"/>`;
+  s+=wire(bx,283,bx,300,C_IDLE);
+  s+=txt(bx,336,'Vs','#E8B23A',20,'middle',MONO,700);
+  s+=txt(bx,362,Vs.toFixed(1)+' V','#E8B23A',20,'middle',MONO,700);
+
+  /* SPDT switch */
+  const sx=215, px=310;
+  s+=wire(bx,TOP,sx,TOP,mode==='charge'?c:C_IDLE);
+  s+=wire(sx,MID,sx,BOT,mode==='discharge'?c:C_IDLE);
+  s+=`<g class="clk" id="swC">${dot(sx,TOP,mode==='charge'?c:'#7D93AB',9)}${txt(sx+18,TOP-16,t.swC,'#7FD4A8',18,'start',SANS,700)}</g>`;
+  s+=`<g class="clk" id="swD">${dot(sx,MID,mode==='discharge'?c:'#7D93AB',9)}${txt(sx+18,MID+30,t.swD,'#F2917F',18,'start',SANS,700)}</g>`;
+  let ex=sx+48, ey=PY-30;
+  if(mode==='charge'){ex=sx;ey=TOP;}
+  if(mode==='discharge'){ex=sx;ey=MID;}
+  s+=`<line x1="${px}" y1="${PY}" x2="${ex}" y2="${ey}" stroke="${mode==='hold'||mode==='idle'?'#C9D4DF':c}" stroke-width="7" stroke-linecap="round"/>`;
+  s+=dot(px,PY,'#C9D4DF',8);
+
+  /* state label */
+  const stc = mode==='charge'?'#7FD4A8':mode==='discharge'?'#F2917F':mode==='hold'?'#E8B23A':'#7D93AB';
+  s+=txt(590,405,t.st[mode],stc,24,'middle',SANS,800);
+
+  /* ammeter */
+  const ax=395;
+  s+=wire(px,PY,ax-30,PY,c);
+  s+=`<circle cx="${ax}" cy="${PY}" r="30" fill="#0B1A2B" stroke="#7D93AB" stroke-width="3"/>`;
+  s+=txt(ax,PY+8,'A','#E6E1D3',24,'middle',MONO,700);
+  s+=`<text id="amText" x="${ax}" y="${PY+64}" fill="#E6E1D3" font-size="22" font-family="${MONO}" font-weight="700" text-anchor="middle">0.000</text>`;
+  s+=txt(ax,PY+88,'mA','#7D93AB',16);
+  s+=wire(ax+30,PY,465,PY,c);
+
+  /* resistor slot */
+  const RL=465, RR=720;
+  if(rSlot==='parallel'){
+    s+=wire(RL,PY-60,RL,PY+60,c)+wire(RR,PY-60,RR,PY+60,c);
+    s+=wire(RL,PY-60,RL+64,PY-60,c)+resistor(RL+128,PY-60,'R₀ '+R0+'k',c,false)+wire(RL+192,PY-60,RR,PY-60,c);
+    s+=wire(RL,PY+60,RL+64,PY+60,c)+resistor(RL+128,PY+60,'+'+ADD_R+'k',c,true)+wire(RL+192,PY+60,RR,PY+60,c);
+    s+=dot(RL,PY,c)+dot(RR,PY,c);
+  }else if(rSlot==='series'){
+    s+=resistor(RL+64,PY,'R₀ '+R0+'k',c,false)+resistor(RL+192,PY,'+'+ADD_R+'k',c,true);
+  }else{
+    s+=wire(RL,PY,RL+64,PY,c)+resistor(RL+128,PY,'R₀ = '+R0+' kΩ',c,false)+wire(RL+192,PY,RR,PY,c);
+  }
+
+  /* capacitor slot */
+  const CX=850;
+  s+=wire(RR,PY,cSlot==='parallel'?880:CX,PY,c);
+  if(cSlot==='parallel'){
+    const x1=772, x2=880;
+    s+=dot(x1,PY,c)+dot(x2,PY,c);
+    s+=wire(x1,PY,x1,240,c)+capacitor(x1,300,120,'C₀',c,false)+wire(x1,360,x1,BOT,c);
+    s+=wire(x2,PY,x2,240,c)+capacitor(x2,300,120,'+C',c,true)+wire(x2,360,x2,BOT,c);
+    s+=dot(x1,BOT,c)+dot(x2,BOT,c);
+    s+=txt((x1+x2)/2,428,C0+' µF ∥ '+ADD_C+' µF',C_LBL,16);
+  }else if(cSlot==='series'){
+    s+=wire(CX,PY,CX,180,c)+capacitor(CX,230,100,'C₀ '+C0+'µF',c,false,true);
+    s+=wire(CX,280,CX,325,c)+capacitor(CX,375,100,'+'+ADD_C+'µF',c,true,true)+wire(CX,425,CX,BOT,c);
+  }else{
+    s+=wire(CX,PY,CX,240,c)+capacitor(CX,300,120,'',c,false)+wire(CX,360,CX,BOT,c);
+    s+=txt(CX-46,306,'C₀','#C9D4DF',18,'end');
+    s+=txt(CX,396,C0+' µF',C_LBL,18);
+  }
+
+  /* voltmeter */
+  const vx=1010, vtop=245, vbot=355;
+  const nodeX = cSlot==='parallel'?880:CX;
+  s+=wire(nodeX,PY,vx,PY,'#5F7894',3)+wire(vx,PY,vx,vtop,'#5F7894',3)+wire(vx,vbot,vx,BOT,'#5F7894',3);
+  s+=`<rect x="${vx-78}" y="${vtop}" width="156" height="${vbot-vtop}" rx="14" fill="#06111C" stroke="${mode==='hold'?'#E8B23A':'#5F7894'}" stroke-width="${mode==='hold'?3.5:2.5}"/>`;
+  s+=txt(vx,vtop+24,'V','#7D93AB',16,'middle',MONO,700);
+  s+=`<text id="vmText" x="${vx}" y="${vtop+74}" fill="#F1ECDF" font-size="46" font-weight="800" font-family="${MONO}" text-anchor="middle">0.00</text>`;
+  s+=`</svg>`;
+  $('board').innerHTML=s;
+  vmText=$('vmText'); amText=$('amText');
+  capFills=Array.from(document.querySelectorAll('.capfill'));
+  $('swC').onclick=()=>setMode('charge');
+  $('swD').onclick=()=>setMode('discharge');
+  paintLive(volt());
+}
+function paintLive(v){
+  if(vmText) vmText.textContent=v.toFixed(2);
+  const I = mode==='charge' ? (Vs-v)/Req : mode==='discharge' ? v/Req : 0;
+  if(amText) amText.textContent=Math.abs(I).toFixed(3);
+  const lvl = Vs>0 ? Math.max(0,Math.min(1,v/Vs)) : 0;
+  capFills.forEach(r=>{
+    const bot=+r.dataset.bot, mx=+r.dataset.max, h=mx*lvl;
+    r.setAttribute('height',h.toFixed(1));
+    r.setAttribute('y',(bot-h).toFixed(1));
+  });
+}
+
+/* ================= CHIPS ================= */
+document.querySelectorAll('[data-r]').forEach(b=>b.onclick=()=>{
+  document.querySelectorAll('[data-r]').forEach(x=>x.classList.remove('on'));
+  b.classList.add('on'); rSlot=b.dataset.r; setMode('idle'); recalc();
+});
+document.querySelectorAll('[data-c]').forEach(b=>b.onclick=()=>{
+  document.querySelectorAll('[data-c]').forEach(x=>x.classList.remove('on'));
+  b.classList.add('on'); cSlot=b.dataset.c; setMode('idle'); recalc();
+});
+
+/* ================= ACTIONS ================= */
+$('aC').onclick=()=>setMode('charge');
+$('aH').onclick=()=>setMode('hold');
+$('aD').onclick=()=>setMode('discharge');
+$('a0').onclick=()=>setMode('idle');
+
+/* ================= STOPWATCH (real time, student-operated) ================= */
+let swRun=false, swStart=0, swAcc=0;
+function swNow(){ return swAcc + (swRun ? performance.now()-swStart : 0); }
+function fmt(ms){
+  const cs=Math.floor(ms/10), m=Math.floor(cs/6000), s=Math.floor(cs/100)%60, c=cs%100;
+  return String(m).padStart(2,'0')+':'+String(s).padStart(2,'0')+'.'+String(c).padStart(2,'0');
+}
+function swToggle(){
+  if(swRun){ swAcc+=performance.now()-swStart; swRun=false; }
+  else { swStart=performance.now(); swRun=true; }
+  $('play').textContent = swRun?'❚❚':'▶';
+  $('play').classList.toggle('run',swRun);
+  $('clock').textContent=fmt(swNow());
+}
+function swReset(){ swRun=false; swAcc=0; $('play').textContent='▶'; $('play').classList.remove('run'); $('clock').textContent=fmt(0); }
+$('play').onclick=swToggle;
+$('rst').onclick=swReset;
+$('rec').onclick=()=>recordPoint();
+document.addEventListener('keydown',e=>{
+  if(e.code==='Space' && !/INPUT|TEXTAREA|BUTTON/.test(document.activeElement.tagName)){ e.preventDefault(); swToggle(); }
+});
+
+/* ================= GRAPH ================= */
+/* two separate data sets: c = charging, d = discharging */
+const GN=20; let gMode='charge';
+const KEY=m=>m==='discharge'?'d':'c';
+(function buildGraph(){
+  const head=`<div class="grow ghead"><span>#</span><span>t (s)</span><span>Vc (V)</span></div>`;
+  let html='';
+  ['c','d'].forEach(k=>{
+    let a='', b='';
+    for(let i=1;i<=GN;i++){
+      const r=`<div class="grow"><span>${i}</span><input id="gt_${k}${i}" inputmode="decimal"><input id="gv_${k}${i}" inputmode="decimal"></div>`;
+      if(i<=GN/2)a+=r; else b+=r;
+    }
+    html+=`<div class="gwrap" id="gw_${k}"><div>${head}${a}</div><div>${head}${b}</div></div>`;
+  });
+  $('gwrap').innerHTML=html;
+  $('gwrap').addEventListener('input',()=>{countPts(); saveData(true);});
+})();
+function showTab(m){
+  gMode=m;
+  document.querySelectorAll('[data-g]').forEach(x=>x.classList.toggle('on',x.dataset.g===m));
+  $('gw_c').style.display = m==='charge'?'grid':'none';
+  $('gw_d').style.display = m==='discharge'?'grid':'none';
+}
+function countPts(){
+  const nc=readPoints('charge').length, nd=readPoints('discharge').length;
+  $('nPts').textContent = (nc||nd) ? `(${nc} · ${nd})` : '';
+  return nc+nd;
+}
+/* ● Record: stopwatch time + current Vc → next empty row of the matching set */
+function recordPoint(){
+  const m = (mode==='charge'||mode==='discharge') ? mode : gMode;
+  const k=KEY(m);
+  let row=0;
+  for(let i=1;i<=GN;i++){ if(!$('gt_'+k+i).value && !$('gv_'+k+i).value){ row=i; break; } }
+  if(!row){ toast(L().full); return; }
+  const t=(swNow()/1000).toFixed(2), v=volt().toFixed(2);
+  $('gt_'+k+row).value=t; $('gv_'+k+row).value=v;
+  showTab(m); countPts(); saveData(true);
+  if($('ovGraph').classList.contains('show')) drawChart();
+  toast((m==='charge'?L().gC:L().gD)+'  #'+row+'   t = '+t+' s   Vc = '+v+' V');
+}
+document.querySelectorAll('[data-g]').forEach(b=>b.onclick=()=>{ showTab(b.dataset.g); drawChart(); });
+const num=s=>parseFloat(String(s||'').replace(',','.'));
+function readPoints(m){
+  const k=KEY(m||gMode), pts=[];
+  for(let i=1;i<=GN;i++){
+    const t=num($('gt_'+k+i).value), v=num($('gv_'+k+i).value);
+    if(isFinite(t)&&isFinite(v)) pts.push({t,v});
+  }
+  return pts.sort((a,b)=>a.t-b.t);
+}
+function saveData(quiet){
+  const d={gMode};
+  ['c','d'].forEach(k=>{ d[k]=[]; for(let i=1;i<=GN;i++) d[k].push([$('gt_'+k+i).value,$('gv_'+k+i).value]); });
+  try{localStorage.setItem('rclab_data2',JSON.stringify(d)); if(!quiet) toast(L().saved);}catch(e){}
+}
+function loadData(){
+  try{
+    const d=JSON.parse(localStorage.getItem('rclab_data2')||'{}');
+    ['c','d'].forEach(k=>{ (d[k]||[]).forEach((r,j)=>{ if(j<GN){ $('gt_'+k+(j+1)).value=r[0]||''; $('gv_'+k+(j+1)).value=r[1]||''; } }); });
+    showTab(d.gMode==='discharge'?'discharge':'charge');
+  }catch(e){ showTab('charge'); }
+}
+function clearPoints(){
+  const k=KEY(gMode);
+  for(let i=1;i<=GN;i++){$('gt_'+k+i).value='';$('gv_'+k+i).value='';}
+  saveData(true); countPts(); drawChart();
+}
+$('bPlot').onclick=drawChart; $('bSave').onclick=shareGraph; $('bClear').onclick=clearPoints;
+$('showTheory').onchange=drawChart; $('showLn').onchange=drawChart;
+function lnVal(p,gm){ gm=gm||gMode; return gm==='charge' ? Math.log(Vs-p.v) : Math.log(p.v); }
+function niceMax(x){ if(!isFinite(x)||x<=0) return 10; const e=Math.pow(10,Math.floor(Math.log10(x))); return Math.ceil(x/e*2)/2*e; }
+function chartSVG(gm){
+  const t=L();
+  const useLn = teacher && $('showLn').checked;
+  const pts=readPoints(gm);
+  const GW=640,GH=360,ml=62,mr=18,mt=16,mb=48, pw=GW-ml-mr, ph=GH-mt-mb;
+  let s=`<svg viewBox="0 0 ${GW} ${GH}" xmlns="http://www.w3.org/2000/svg"><rect width="${GW}" height="${GH}" rx="12" fill="#0B1A2B" stroke="#24405C"/>`;
+  const xmax=niceMax(Math.max((pts.length?pts[pts.length-1].t:0)*1.1, tau*1.2, 1));
+  let ymin=0, ymax;
+  if(useLn){
+    const ys=pts.map(p=>lnVal(p,gm)).filter(isFinite);
+    if(ys.length){ ymin=Math.min(...ys); ymax=Math.max(...ys); const pad=(ymax-ymin||1)*.15; ymin-=pad; ymax+=pad; }
+    else { ymin=-1; ymax=Math.log(Vs>0?Vs:9); }
+  } else ymax=niceMax(Math.max(Vs, pts.length?Math.max(...pts.map(p=>p.v)):0));
+  const X=v=>ml+pw*v/xmax, Y=v=>mt+ph*(1-(v-ymin)/((ymax-ymin)||1));
+  for(let i=0;i<=5;i++){
+    const gx=ml+pw*i/5, gy=mt+ph*i/5;
+    s+=`<line x1="${gx}" y1="${mt}" x2="${gx}" y2="${mt+ph}" stroke="#17304A"/><line x1="${ml}" y1="${gy}" x2="${ml+pw}" y2="${gy}" stroke="#17304A"/>`;
+    s+=txt(gx,mt+ph+20,(xmax*i/5).toFixed(xmax<10?1:0),'#7D93AB',13);
+    s+=txt(ml-8,gy+5,(ymax-(ymax-ymin)*i/5).toFixed(useLn?2:1),'#7D93AB',13,'end');
+  }
+  s+=wire(ml,mt+ph,ml+pw,mt+ph,'#5F7894',1.5)+wire(ml,mt,ml,mt+ph,'#5F7894',1.5);
+  s+=txt(ml+pw/2,GH-8,t.axT,C_LBL,14);
+  const yl=useLn?(gm==='charge'?t.axLnC:t.axLnD):t.axV;
+  s+=`<text x="16" y="${mt+ph/2}" fill="${C_LBL}" font-size="14" font-family="${MONO}" text-anchor="middle" transform="rotate(-90 16 ${mt+ph/2})">${yl}</text>`;
+  if(teacher && $('showTheory').checked && tau>0){
+    const V0d=pts.length?Math.max(...pts.map(p=>p.v)):Vs;
+    let d='';
+    for(let i=0;i<=150;i++){
+      const tt=xmax*i/150, v=gm==='charge'?Vs*(1-Math.exp(-tt/tau)):V0d*Math.exp(-tt/tau);
+      const yv=useLn?(gm==='charge'?Math.log(Vs-v):Math.log(v)):v;
+      if(!isFinite(yv)) continue;
+      d+=(d?'L':'M')+X(tt).toFixed(1)+','+Math.max(mt,Math.min(mt+ph,Y(yv))).toFixed(1);
+    }
+    if(d) s+=`<path d="${d}" fill="none" stroke="#E8B23A" stroke-width="2.2" stroke-dasharray="7 5"/>`;
+  }
+  const dr=[];
+  pts.forEach(p=>{const yv=useLn?lnVal(p,gm):p.v; if(isFinite(yv)&&yv>=ymin&&yv<=ymax&&p.t<=xmax) dr.push({x:X(p.t),y:Y(yv)});});
+  if(dr.length>1) s+=`<path d="${dr.map((q,i)=>(i?'L':'M')+q.x.toFixed(1)+','+q.y.toFixed(1)).join('')}" fill="none" stroke="#7FD4A8" stroke-width="1.8" opacity=".6"/>`;
+  dr.forEach(q=>{s+=`<circle cx="${q.x.toFixed(1)}" cy="${q.y.toFixed(1)}" r="5.5" fill="#7FD4A8" stroke="#0B1A2B" stroke-width="2"/>`;});
+  if(!dr.length) s+=txt(ml+pw/2,mt+ph/2,t.noData,'#5F7894',15,'middle',SANS);
+  return s+'</svg>';
+}
+function drawChart(){
+  const t=L(), pts=readPoints();
+  $('chart').innerHTML=chartSVG(gMode);
+  /* teacher: least-squares τ from ln data */
+  $('fitOut').textContent='';
+  if(teacher){
+    const g=pts.map(p=>({t:p.t,y:lnVal(p)})).filter(o=>isFinite(o.y));
+    if(g.length>=2){
+      const n=g.length, st=g.reduce((a,o)=>a+o.t,0), sy=g.reduce((a,o)=>a+o.y,0),
+            stt=g.reduce((a,o)=>a+o.t*o.t,0), sty=g.reduce((a,o)=>a+o.t*o.y,0), den=n*stt-st*st;
+      if(den){ const m=(n*sty-st*sy)/den; if(m<0) $('fitOut').textContent=`${t.fit} = ${(-1/m).toFixed(2)} s`; }
+    }
+  }
+}
+
+/* ================= SEND GRAPH IMAGE ================= */
+/* one PNG with both graphs on white (prints well) → share sheet (Mail) or download */
+const PRINT_COL=[['#0B1A2B','#FFFFFF'],['#17304A','#E2E7ED'],['#24405C','#C9D2DC'],['#7D93AB','#4A5563'],
+  ['#C9D4DF','#1B2430'],['#5F7894','#3A4552'],['#7FD4A8','#15804C'],['#E8B23A','#B7791F']];
+function svgToImg(svg){
+  PRINT_COL.forEach(([a,b])=>{svg=svg.split(a).join(b);});
+  return new Promise((res,rej)=>{
+    const im=new Image();
+    im.onload=()=>res(im); im.onerror=rej;
+    im.src='data:image/svg+xml;charset=utf-8,'+encodeURIComponent(svg);
+  });
+}
+async function shareGraph(){
+  const t=L();
+  const [ic,id]=await Promise.all([svgToImg(chartSVG('charge')),svgToImg(chartSVG('discharge'))]);
+  const S=2, CW=640*S, CH=360*S, top=110, gap=70;
+  const cv=document.createElement('canvas');
+  cv.width=CW+80; cv.height=top+CH*2+gap+90;
+  const g=cv.getContext('2d');
+  g.fillStyle='#fff'; g.fillRect(0,0,cv.width,cv.height);
+  const now=new Date(), pad=n=>String(n).padStart(2,'0');
+  const stamp=`${now.getFullYear()}-${pad(now.getMonth()+1)}-${pad(now.getDate())} ${pad(now.getHours())}:${pad(now.getMinutes())}`;
+  g.fillStyle='#111'; g.font='bold 40px '+SANS; g.fillText(t.title,40,62);
+  g.fillStyle='#555'; g.font='26px '+SANS; g.fillText(stamp,40,98);
+  g.textAlign='right'; g.fillText('Vs = '+Vs+' V',cv.width-40,98); g.textAlign='left';
+  g.fillStyle='#15804C'; g.font='bold 30px '+SANS; g.fillText(t.gC,40,top+30);
+  g.drawImage(ic,40,top+42,CW,CH);
+  const y2=top+42+CH+gap;
+  g.fillStyle='#C0392B'; g.fillText(t.gD,40,y2-12);
+  g.drawImage(id,40,y2,CW,CH);
+  g.fillStyle='#777'; g.font='20px '+SANS; g.textAlign='center';
+  g.fillText(t.credit,cv.width/2,cv.height-24);
+  const blob=await new Promise(r=>cv.toBlob(r,'image/png'));
+  const name=`rc-lab-graph-${stamp.replace(/[-: ]/g,'')}.png`;
+  const file=new File([blob],name,{type:'image/png'});
+  if(navigator.canShare && navigator.canShare({files:[file]})){
+    try{ await navigator.share({files:[file],title:t.shareTitle}); return; }
+    catch(e){ if(e && e.name==='AbortError') return; }
+  }
+  const a=document.createElement('a');
+  a.href=URL.createObjectURL(blob); a.download=name;
+  document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(()=>URL.revokeObjectURL(a.href),4000);
+  toast(t.dl);
+}
+
+/* ================= OVERLAYS ================= */
+function openOv(id){ $(id).classList.add('show'); }
+function closeOv(id){ $(id).classList.remove('show'); }
+document.querySelectorAll('.ov').forEach(o=>{
+  o.addEventListener('click',e=>{ if(e.target===o) o.classList.remove('show'); });
+  o.querySelectorAll('[data-close]').forEach(b=>b.onclick=()=>o.classList.remove('show'));
+});
+$('graphBtn').onclick=()=>{ openOv('ovGraph'); drawChart(); };
+function toast(m){ const e=$('toast'); e.textContent=m; e.style.display='block'; clearTimeout(e._t); e._t=setTimeout(()=>e.style.display='none',1800); }
+
+/* ================= TEACHER (password) ================= */
+function sha256(str){
+  const K=[0x428a2f98,0x71374491,0xb5c0fbcf,0xe9b5dba5,0x3956c25b,0x59f111f1,0x923f82a4,0xab1c5ed5,0xd807aa98,0x12835b01,0x243185be,0x550c7dc3,0x72be5d74,0x80deb1fe,0x9bdc06a7,0xc19bf174,0xe49b69c1,0xefbe4786,0x0fc19dc6,0x240ca1cc,0x2de92c6f,0x4a7484aa,0x5cb0a9dc,0x76f988da,0x983e5152,0xa831c66d,0xb00327c8,0xbf597fc7,0xc6e00bf3,0xd5a79147,0x06ca6351,0x14292967,0x27b70a85,0x2e1b2138,0x4d2c6dfc,0x53380d13,0x650a7354,0x766a0abb,0x81c2c92e,0x92722c85,0xa2bfe8a1,0xa81a664b,0xc24b8b70,0xc76c51a3,0xd192e819,0xd6990624,0xf40e3585,0x106aa070,0x19a4c116,0x1e376c08,0x2748774c,0x34b0bcb5,0x391c0cb3,0x4ed8aa4a,0x5b9cca4f,0x682e6ff3,0x748f82ee,0x78a5636f,0x84c87814,0x8cc70208,0x90befffa,0xa4506ceb,0xbef9a3f7,0xc67178f2];
+  const Hh=new Uint32Array([0x6a09e667,0xbb67ae85,0x3c6ef372,0xa54ff53a,0x510e527f,0x9b05688c,0x1f83d9ab,0x5be0cd19]);
+  const m=new TextEncoder().encode(str), l=m.length, nb=((l+9+63)>>6)<<6;
+  const buf=new Uint8Array(nb); buf.set(m); buf[l]=0x80;
+  const dv=new DataView(buf.buffer); dv.setUint32(nb-4,(l*8)>>>0); dv.setUint32(nb-8,Math.floor(l*8/4294967296));
+  const Wd=new Uint32Array(64), r=(x,n)=>(x>>>n)|(x<<(32-n));
+  for(let i=0;i<nb;i+=64){
+    for(let k=0;k<16;k++) Wd[k]=dv.getUint32(i+k*4);
+    for(let k=16;k<64;k++){ const a=Wd[k-15], b=Wd[k-2];
+      Wd[k]=(Wd[k-16]+(r(a,7)^r(a,18)^(a>>>3))+Wd[k-7]+(r(b,17)^r(b,19)^(b>>>10)))>>>0; }
+    let [a,b,c,d,e,f,g,h]=Hh;
+    for(let k=0;k<64;k++){
+      const t1=(h+(r(e,6)^r(e,11)^r(e,25))+((e&f)^(~e&g))+K[k]+Wd[k])>>>0;
+      const t2=((r(a,2)^r(a,13)^r(a,22))+((a&b)^(a&c)^(b&c)))>>>0;
+      h=g; g=f; f=e; e=(d+t1)>>>0; d=c; c=b; b=a; a=(t1+t2)>>>0;
+    }
+    Hh[0]+=a; Hh[1]+=b; Hh[2]+=c; Hh[3]+=d; Hh[4]+=e; Hh[5]+=f; Hh[6]+=g; Hh[7]+=h;
+  }
+  return Array.from(Hh).map(x=>x.toString(16).padStart(8,'0')).join('');
+}
+/* iPad/phone keyboards turn ' into ‘ or ’ — treat them all the same */
+const normPw=s=>String(s||'').trim().replace(/[‘’‚‛′`´]/g,"'").replace(/[“”„″]/g,'"');
+const DEF_PW='8db889767c2c37605279743265bbe7e417a602cf63627e30551165e1f9f68e2e';
+const ADMIN ='74f89be178af41f05b80025a7731d6acea563feaf7e7f545bac3b7ee39ef80a4';
+const PW_KEY='labTeacherPwHash';
+function pwHash(){ try{ return localStorage.getItem(PW_KEY)||DEF_PW; }catch(e){ return DEF_PW; } }
+
+$('bTeacher').onclick=()=>{
+  if(teacher){ openOv('ovT'); fillTeacher(); return; }
+  $('pwIn').value=''; $('pwMsg').textContent=''; openOv('ovPw'); setTimeout(()=>$('pwIn').focus(),60);
+};
+function tryPw(){
+  if(sha256(normPw($('pwIn').value))===pwHash()){
+    teacher=true; closeOv('ovPw'); $('bTeacher').classList.add('on');
+    paintTeacher(); drawChart(); openOv('ovT'); fillTeacher();
+  } else { $('pwMsg').textContent=L().wrong; $('pwIn').select(); }
+}
+$('pwOk').onclick=tryPw;
+$('pwIn').addEventListener('keydown',e=>{ if(e.key==='Enter') tryPw(); });
+
+function fillTeacher(){ $('inVs').value=Vs; $('inR0').value=R0; $('inC0').value=C0; paintTeacher(); }
+[['inVs',v=>Vs=v],['inR0',v=>R0=v],['inC0',v=>C0=v]].forEach(([id,set])=>{
+  $(id).addEventListener('input',e=>{ const v=num(e.target.value); if(v>0){ set(v); setMode('idle'); recalc(); updChipText(); } });
+});
+$('bExit').onclick=()=>{
+  teacher=false; $('bTeacher').classList.remove('on'); $('showTheory').checked=false; $('showLn').checked=false;
+  closeOv('ovT'); paintTeacher(); drawChart();
+};
+$('bLink').onclick=()=>{
+  const tok=btoa(JSON.stringify({v:Vs,r:R0,c:C0})).split('').reverse().join('');
+  const url=location.origin+location.pathname+'?lab='+encodeURIComponent(tok);
+  const done=()=>toast(L().copied);
+  if(navigator.clipboard&&navigator.clipboard.writeText) navigator.clipboard.writeText(url).then(done,()=>prompt('',url));
+  else prompt('',url);
+};
+$('bPwSave').onclick=()=>{
+  const ok=sha256($('inEm').value.trim().toLowerCase()+'|'+$('inAp').value.trim())===ADMIN;
+  if(!ok){ $('chgMsg').textContent=L().pwBad; return; }
+  const np=normPw($('inNp').value);
+  if(!np){ $('chgMsg').textContent=L().pwEmpty; return; }
+  try{ localStorage.setItem(PW_KEY,sha256(np)); }catch(e){}
+  $('chgMsg').textContent=L().pwDone; $('inAp').value=''; $('inNp').value='';
+};
+
+function paintTeacher(){
+  $('tkey').style.display = teacher?'block':'none';
+  $('tgTools').style.display = teacher?'flex':'none';
+  if(!teacher) return;
+  const v0 = (mode==='discharge'||Vdis!=null) && Vdis!=null ? Vdis : Vs;
+  const html=`τ = ${tau.toFixed(2)} s<br>Req = ${Req.toFixed(2)} kΩ<br>Ceq = ${Ceq.toFixed(1)} µF<br>0.63·Vs = ${(0.63*Vs).toFixed(2)} V<br>0.37·V₀ = ${(0.37*v0).toFixed(2)} V`;
+  $('tkey').innerHTML=html; $('keyFull').innerHTML=html;
+}
+
+/* ================= LANGUAGE ================= */
+function updChipText(){
+  const t=L();
+  $('cR0').textContent=t.r0+' '+R0+'k'; $('cRs').textContent=t.rs; $('cRp').textContent=t.rp;
+  $('cC0').textContent=t.c0+' '+C0+'µF'; $('cCs').textContent=t.cs; $('cCp').textContent=t.cp;
+}
+function setLang(l){
+  lang=l; document.documentElement.lang=l;
+  try{localStorage.setItem('rclab_lang',l);}catch(e){}
+  $('bEN').classList.toggle('on',l==='en'); $('bTH').classList.toggle('on',l==='th');
+  const t=L(), set=(id,v)=>{$(id).textContent=v;};
+  set('tTitle',t.title); set('bTeacher',t.teacher); set('tGraphBtn',t.graph); set('tRec',t.rec);
+  updChipText();
+  set('aC',t.aC); set('aH',t.aH); set('aD',t.aD); set('a0',t.a0);
+  set('credit',t.credit);
+  set('tGraph',t.graph); set('gC',t.gC); set('gD',t.gD); set('bPlot',t.plot); set('bSave',t.save); set('bClear',t.clear);
+  set('tTheory',t.theory); set('tLn',t.lnp);
+  set('tPwTitle',t.pwTitle); set('tTp',t.tp); set('lVs',t.vs); set('lR0',t.r0l); set('lC0',t.c0l);
+  set('bLink',t.link); set('bExit',t.exit); set('tChg',t.chg); set('lEm',t.em); set('lAp',t.ap); set('lNp',t.np); set('bPwSave',t.pwSave);
+  drawBoard(); paintTeacher(); drawChart();
+}
+$('bEN').onclick=()=>setLang('en');
+$('bTH').onclick=()=>setLang('th');
+
+/* ================= LOOP ================= */
+function loop(){
+  const v=volt();
+  paintLive(v);
+  if(swRun) $('clock').textContent=fmt(swNow());
+  requestAnimationFrame(loop);
+}
+
+/* ================= INIT ================= */
+let startLang='en';
+try{ startLang=localStorage.getItem('rclab_lang')||'en'; }catch(e){}
+loadData();
+countPts();
+recalc();
+setLang(startLang==='th'?'th':'en');
+requestAnimationFrame(loop);
+</script>
+</body>
+</html>
